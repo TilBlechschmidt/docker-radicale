@@ -1,4 +1,4 @@
-FROM alpine:3.20.3
+FROM alpine:3.20.3 AS base
 
 ARG COMMIT_ID
 ENV COMMIT_ID=${COMMIT_ID}
@@ -16,29 +16,29 @@ ARG TAKE_FILE_OWNERSHIP
 ENV TAKE_FILE_OWNERSHIP=${TAKE_FILE_OWNERSHIP:-true}
 
 LABEL maintainer="Thomas Queste <tom@tomsquest.com>" \
-      org.label-schema.name="Radicale Docker Image" \
-      org.label-schema.description="Enhanced Docker image for Radicale, the CalDAV/CardDAV server" \
-      org.label-schema.url="https://github.com/Kozea/Radicale" \
-      org.label-schema.version=$VERSION \
-      org.label-schema.vcs-ref=$COMMIT_ID \
-      org.label-schema.vcs-url="https://github.com/tomsquest/docker-radicale" \
-      org.label-schema.schema-version="1.0"
+    org.label-schema.name="Radicale Docker Image" \
+    org.label-schema.description="Enhanced Docker image for Radicale, the CalDAV/CardDAV server" \
+    org.label-schema.url="https://github.com/Kozea/Radicale" \
+    org.label-schema.version=$VERSION \
+    org.label-schema.vcs-ref=$COMMIT_ID \
+    org.label-schema.vcs-url="https://github.com/tomsquest/docker-radicale" \
+    org.label-schema.schema-version="1.0"
 
 RUN apk add --no-cache --virtual=build-dependencies \
-        gcc \
-        musl-dev \
-        libffi-dev \
-        python3-dev \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    python3-dev \
     && apk add --no-cache \
-        curl \
-        git \
-        openssh \
-        shadow \
-        su-exec \
-        tzdata \
-        wget \
-        python3 \
-        py3-pip \
+    curl \
+    git \
+    openssh \
+    shadow \
+    su-exec \
+    tzdata \
+    wget \
+    python3 \
+    py3-pip \
     && python -m venv /venv \
     && /venv/bin/pip install --no-cache-dir radicale==$VERSION passlib[bcrypt] pytz \
     && apk del --purge build-dependencies \
@@ -58,3 +58,11 @@ EXPOSE 5232
 COPY docker-entrypoint.sh /usr/local/bin
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["/venv/bin/radicale", "--config", "/config/config"]
+
+# -------------------- Extended image with LDAP support --------------------
+
+FROM base AS ldap
+
+RUN apk add --no-cache py3-ldap3 \
+    && /venv/bin/pip install --no-cache-dir ldap3 \
+    && rm -fr /root/.cache
